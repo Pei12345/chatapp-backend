@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using ChatApp.API.Models;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,14 @@ namespace ChatApp.API.Data
 
         public async Task<List<ChatMessage>> GetChatHistory()
         {
-            return await _context.ChatMessages.ToListAsync();
+            // return await _context.ChatMessages.ToListAsync();
+            var messages = await _context.ChatMessages.OrderByDescending(m => m.Sent).Take(50).ToListAsync();
+            return messages.OrderBy(m => m.Sent).ToList();
+        }
+
+        public async Task<bool> SaveAllAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
         }
     }
 }
