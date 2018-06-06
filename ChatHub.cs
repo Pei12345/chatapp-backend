@@ -36,7 +36,7 @@ namespace ChatApp.API
                 _repo.Add(msgToSave);           
                 await _repo.SaveAllAsync();     
 
-                await Clients.All.SendAsync("ReceiveMessage", msgToSave.Sent, user, message);
+                await Clients.All.SendAsync("ReceiveMessage", msgToSave);
             }
             catch { }
         }
