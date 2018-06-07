@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using ChatApp.API.Data;
@@ -17,9 +18,29 @@ namespace ChatApp.API
 
         public override async Task OnConnectedAsync()
         {
-            var messages = await _repo.GetChatHistory(); 
+            var httpContext = Context.GetHttpContext();
+            var username = httpContext.Request.Query["name"];
+            var connectionId = Context.ConnectionId;
+            var userToAdd = new User
+            {
+                ConnectionId = connectionId,
+                Username = username
+            };
+
+            var messages = await _repo.GetChatHistory();
             await Clients.Caller.SendAsync("ChatHistory", messages);
             await base.OnConnectedAsync();
+
+            var onlineUsers = await _repo.AddOnlineUser(userToAdd);
+            await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
+        }
+
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var onlineUsers = await _repo.RemoveOnlineUser(Context.ConnectionId);            
+            await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
+
+            await base.OnDisconnectedAsync(exception);
         }
 
         public async Task SendMessage(string user, string message)
@@ -33,8 +54,8 @@ namespace ChatApp.API
                     Sent = DateTime.Now
                 };
 
-                _repo.Add(msgToSave);           
-                await _repo.SaveAllAsync();     
+                _repo.Add(msgToSave);
+                await _repo.SaveAllAsync();
 
                 await Clients.All.SendAsync("ReceiveMessage", msgToSave);
             }
