@@ -43,7 +43,6 @@ namespace ChatApp.API.Data
 
         public async Task<List<ChatMessage>> GetChatHistory()
         {
-            // return await _context.ChatMessages.ToListAsync();
             var messages = await _context.ChatMessages.OrderByDescending(m => m.Sent).Take(50).ToListAsync();
             return messages.OrderBy(m => m.Sent).ToList();
         }

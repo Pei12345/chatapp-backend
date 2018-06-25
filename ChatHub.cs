@@ -18,6 +18,7 @@ namespace ChatApp.API
 
         public override async Task OnConnectedAsync()
         {
+            // add user to users online on connect
             var httpContext = Context.GetHttpContext();
             var username = httpContext.Request.Query["name"];
             var connectionId = Context.ConnectionId;
@@ -27,16 +28,18 @@ namespace ChatApp.API
                 Username = username
             };
 
+            var onlineUsers = await _repo.AddOnlineUser(userToAdd);
+            await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
+
             var messages = await _repo.GetChatHistory();
             await Clients.Caller.SendAsync("ChatHistory", messages);
             await base.OnConnectedAsync();
 
-            var onlineUsers = await _repo.AddOnlineUser(userToAdd);
-            await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
+            // remove user from users online on disconnect
             var onlineUsers = await _repo.RemoveOnlineUser(Context.ConnectionId);            
             await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
 
