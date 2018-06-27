@@ -54,9 +54,8 @@ namespace ChatApp.API
                 {
                     User = user,
                     Message = message,
-                    Sent = DateTime.Now
+                    Sent = DateTime.UtcNow
                 };
-
                 _repo.Add(msgToSave);
                 await _repo.SaveAllAsync();
 
