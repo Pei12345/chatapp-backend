@@ -11,6 +11,7 @@ namespace ChatApp.API
     public class ChatHub : Hub
     {
         private readonly IChatRepository _repo;
+        
         public ChatHub(IChatRepository repo)
         {
             _repo = repo;
@@ -28,13 +29,15 @@ namespace ChatApp.API
                 Username = username
             };
 
+            var roomName = httpContext.Request.Query["roomName"];
+            await JoinRoom(roomName);
+
             var onlineUsers = await _repo.AddOnlineUser(userToAdd);
             await Clients.All.SendAsync("GetOnlineUsers", onlineUsers);
 
-            var messages = await _repo.GetChatHistory();
-            await Clients.Caller.SendAsync("ChatHistory", messages);
-            await base.OnConnectedAsync();
+            await GetRoomChatHistory(roomName);
 
+            await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
@@ -46,7 +49,7 @@ namespace ChatApp.API
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SendMessage(string user, string message)
+        public async Task SendMessage(string user, string room, string message)
         {
             try
             {
@@ -54,20 +57,42 @@ namespace ChatApp.API
                 {
                     User = user,
                     Message = message,
-                    Sent = DateTime.UtcNow
+                    Sent = DateTime.UtcNow,
+                    Room = room
                 };
                 _repo.Add(msgToSave);
                 await _repo.SaveAllAsync();
 
-                await Clients.All.SendAsync("ReceiveMessage", msgToSave);
+                await Clients.Group(room).SendAsync("ReceiveMessage", msgToSave);
             }
             catch { }
         }
 
-        public async Task GetHistory()
+        public async Task ChangeRoom(string fromRoom, string toRoom)
         {
-            var messages = await _repo.GetChatHistory();
+            try 
+            {
+                await LeaveRoom(fromRoom);
+                await JoinRoom(toRoom);
+                await GetRoomChatHistory(toRoom);
+            }
+            catch {}
+        }
+
+        public async Task GetRoomChatHistory(string roomName)
+        {
+            var messages = await _repo.GetChatHistory(roomName);
             await Clients.Caller.SendAsync("ChatHistory", messages);
+        }
+
+        public async Task JoinRoom(string roomName)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+        }
+
+        public async Task LeaveRoom(string roomName)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
         }
     }
 }

@@ -41,9 +41,12 @@ namespace ChatApp.API.Data
            _context.Remove(entity);
         }
 
-        public async Task<List<ChatMessage>> GetChatHistory()
+        public async Task<List<ChatMessage>> GetChatHistory(string roomName)
         {
-            var messages = await _context.ChatMessages.OrderByDescending(m => m.Sent).Take(50).ToListAsync();
+            var messages = await _context.ChatMessages
+                .Where(m => m.Room == roomName)
+                .OrderByDescending(m => m.Sent)
+                .Take(50).ToListAsync();
             return messages.OrderBy(m => m.Sent).ToList();
         }
 
